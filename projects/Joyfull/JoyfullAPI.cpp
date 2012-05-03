@@ -40,44 +40,57 @@
 #include "JoyfullAPI.h"
 
 
-void process_event(struct js_event e) {
+FB::variant process_event(struct js_event e) {
 
     /*printf("time: %lu, value: %d, type: 0x%X, number: 0x%X\n",*/
             /*e.time, e.value, e.type, e.number);*/
 
+    std::map<std::string, FB::variant> joyObj;
+
     if (IS_BUTTON(e.type) & !IS_INIT(e.type)) {
-        printf("Pressed ");
+        std::string buf;
         switch(e.number) {
-            case TRIGGER: printf(" TRIGGER %d", e.value); break;
-            case DOWN_TOP: printf(" DOWN_TOP %d", e.value); break;
-            case UP_TOP: printf(" UP_TOP %d", e.value); break;
-            case LEFT_TOP: printf(" LEFT_TOP %d", e.value); break;
-            case RIGHT_TOP: printf(" RIGHT_TOP %d", e.value); break;
-            case BOT_LEFTUP: printf(" BOT_LEFTUP %d", e.value); break;
-            case BOT_LEFTDOWN: printf(" BOT_LEFTDOWN %d", e.value); break;
-            case BOT_CENTERLEFT: printf(" BOT_CENTERLEFT %d", e.value); break;
-            case BOT_CENTERRIGHT: printf(" BOT_CENTERRIGHT %d", e.value); break;
-            case BOT_RIGHTDOWN: printf(" BOT_RIGHTDOWN %d", e.value); break;
-            case BOT_RIGHTUP: printf(" BOT_RIGHTUP %d", e.value); break;
+            case TRIGGER: buf = "trigger"; break;
+            case DOWN_TOP: buf = "down_top"; break;
+            case UP_TOP: buf = "up_top"; break;
+            case LEFT_TOP: buf = "left_top"; break;
+            case RIGHT_TOP: buf = "right_top"; break;
+            case BOT_LEFTUP: buf = "leftup_bot"; break;
+            case BOT_LEFTDOWN: buf = "leftdown_bot"; break;
+            case BOT_CENTERLEFT: buf = "centerleft_bot"; break;
+            case BOT_CENTERRIGHT: buf = "centerright_bot"; break;
+            case BOT_RIGHTDOWN: buf = "rightdown_bot"; break;
+            case BOT_RIGHTUP: buf = "rightup_bot"; break;
             default: printf("Error!"); break;
         }
-        printf("\n");
+        joyObj["button_type"] = buf;
     }
     else if (!IS_BUTTON(e.type) & !IS_INIT(e.type)) {
     
-        printf("Analog stick: ");
+        std::string buf;
         switch(e.number) {
-            case 0: printf(" X: %d", e.value); break;
-            case 1: printf(" Y: %d", e.value); break;
-            case 2: printf(" BALL: %d", e.value); break;
+            case 0: buf = "analog_x"; break;
+            case 1: buf = "analog_y"; break;
+            case 2: buf = "analog_ball"; break;
             default: printf("Error!"); break;
         }
-        printf("\n");
+        joyObj["button_type"] = buf;
     }
+    joyObj["button_value"] = e.value;
 
+    return joyObj;
 }
 
 
+FB::variant JoyfullAPI::init(const FB::variant& path) {
+    
+    //printf("Path: %s\n", path.cast<std::string>().c_str());
+    fd = open (path.cast<std::string>().c_str(), O_NONBLOCK);
+    if (fd == -1)
+        return false;
+    else
+        return true;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @fn FB::variant JoyfullAPI::echo(const FB::variant& msg)
@@ -85,36 +98,23 @@ void process_event(struct js_event e) {
 /// @brief  Echos whatever is passed from Javascript.
 ///         Go ahead and change it. See what happens!
 ///////////////////////////////////////////////////////////////////////////////
-FB::variant JoyfullAPI::echo(const FB::variant& msg)
+FB::variant JoyfullAPI::poll(const FB::variant& msg)
 {
-    static int n(0);
     struct js_event e;
-    static int fd(-1);
 
-           // process_event(e);
+    // process_event(e);
 
+    char buf[200];
+    while (read (fd, &e, sizeof(struct js_event)) > 0) {
+        sprintf(buf, "e.value:%d e.type:0x%X e.number:0x%X ", e.value, e.type, e.number);
+        fire_joystickData(process_event(e));
+    };
 
-    
-    if (n == 0) {
-        fd = open ("/dev/input/js0", O_NONBLOCK);
-        n++;
-    }
-    else {
-        char buf[200];
-        while (read (fd, &e, sizeof(struct js_event)) > 0) {
-            sprintf(buf, "e.value:%d e.type:0x%X e.number:0x%X", e.value, e.type, e.number);
-            fire_echo(buf, -2);
-        };
-
-        /*EAGAIN is returned when the queue is empty*/
-        if (errno != EAGAIN) {
-            fire_echo("So far, you clicked this many times(error): ", errno);
-            return msg;
-        }
-
+    /*EAGAIN is returned when the queue is empty*/
+    if (errno != EAGAIN) {
+        fire_joystickData("Error!");
         return msg;
     }
-    fire_echo("So far, you clicked this many times: ", -1);
 
     // return "foobar";
     return msg;
@@ -154,7 +154,3 @@ std::string JoyfullAPI::get_version()
     return FBSTRING_PLUGIN_VERSION;
 }
 
-void JoyfullAPI::testEvent()
-{
-    fire_test();
-}
