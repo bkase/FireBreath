@@ -34,7 +34,7 @@ set(MOZILLA_PLUGINID "brandonkase.com/Joyfull")
 # strings
 set(FBSTRING_CompanyName "bkase")
 set(FBSTRING_PluginDescription "Use a Joystick in the browser")
-set(FBSTRING_PLUGIN_VERSION "1.0.0.0")
+set(FBSTRING_PLUGIN_VERSION "0.1")
 set(FBSTRING_LegalCopyright "Copyright 2012 bkase")
 set(FBSTRING_PluginFileName "np${PLUGIN_NAME}.dll")
 set(FBSTRING_ProductName "Joyfull")
