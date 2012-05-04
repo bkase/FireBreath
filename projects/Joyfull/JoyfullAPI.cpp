@@ -45,7 +45,7 @@ FB::variant process_event(struct js_event e) {
     /*printf("time: %lu, value: %d, type: 0x%X, number: 0x%X\n",*/
             /*e.time, e.value, e.type, e.number);*/
 
-    std::map<std::string, FB::variant> joyObj;
+    std::map<std::string, FB::variant> joyButton;
 
     if (IS_BUTTON(e.type) & !IS_INIT(e.type)) {
         std::string buf;
@@ -63,7 +63,7 @@ FB::variant process_event(struct js_event e) {
             case BOT_RIGHTUP: buf = "rightup_bot"; break;
             default: printf("Error!"); break;
         }
-        joyObj["button_type"] = buf;
+        joyButton["type"] = buf;
     }
     else if (!IS_BUTTON(e.type) & !IS_INIT(e.type)) {
     
@@ -74,11 +74,15 @@ FB::variant process_event(struct js_event e) {
             case 2: buf = "analog_ball"; break;
             default: printf("Error!"); break;
         }
-        joyObj["button_type"] = buf;
+        joyButton["type"] = buf;
     }
-    joyObj["button_value"] = e.value;
+    else {
+        /* initial state */
+        return "undefined";
+    }
+    joyButton["value"] = e.value;
 
-    return joyObj;
+    return joyButton;
 }
 
 
@@ -105,9 +109,12 @@ FB::variant JoyfullAPI::poll(const FB::variant& msg)
     // process_event(e);
 
     char buf[200];
+    FB::variant joyButton;
     while (read (fd, &e, sizeof(struct js_event)) > 0) {
         sprintf(buf, "e.value:%d e.type:0x%X e.number:0x%X ", e.value, e.type, e.number);
-        fire_joystickData(process_event(e));
+        joyButton = process_event(e);
+        if (!joyButton.is_of_type<std::string>())
+            fire_joystickData(process_event(e));
     };
 
     /*EAGAIN is returned when the queue is empty*/
